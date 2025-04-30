@@ -1,3 +1,4 @@
+clear;
 M = 10000;
 thetas = zeros(6, M);
 v = [0.1; 0.1; 0; 0; 0; 0];
@@ -76,5 +77,3 @@ title('y');
 subplot(3, 2, 5);
 plot(t, xyz(3, :))
 title('z');
-
-

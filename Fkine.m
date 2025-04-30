@@ -1,12 +1,10 @@
-% AUTHOR :dummy
-%
-% ABSTRACT： 这是计算机器人正解函数，通用函数，需调用Transformation函数
-% 
-% INPUT： theta   机器人关节位移，1xN向量，单位m和rad
-%
-% OUTPUT: g_st    机器人末端位姿位姿， 4X4矩阵
-% 
 function g_st = Fkine(theta)
+    % FKINE 这是计算机器人正解函数，通用函数，需调用Transformation函数
+    % INPUT:
+    % theta   机器人关节位移，1xN向量，单位m和rad
+    % OUTPUT:
+    % g_st    机器人末端位姿位姿， 4X4矩阵
+
     L1 = 491; L2 = 450; L3 = 450; L4 = 84;
     q1 = [0, 0, 0]; q2 = [0, 0, L1];
     q3 = [0, 0, L1+L2]; q4 = [0, 0, L1+L2];

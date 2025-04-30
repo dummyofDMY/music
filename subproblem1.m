@@ -1,4 +1,13 @@
 function theta = subproblem1(Xi, r, p, q)
+    % SUBPROBLEM1 求解子问题一
+    % INPUT:
+    % Xi       转轴旋量
+    % r        转轴上一点
+    % p        起始点
+    % q        终止点
+    % OUTPUT:
+    % res      求得的结果，已经规范化了
+
     omega = Xi(4:6)';  % 转轴为列向量
     omega = omega / norm(omega);  % 单位化转轴
 

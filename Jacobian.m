@@ -1,12 +1,10 @@
-% AUTHOR :dummy
-%
-% ABSTRACT： 计算当前姿态的雅可比矩阵
-% 
-% INPUT： thetas   各关节当前转角
-%
-% OUTPUT: res      求得的结果
-% 
 function res = Jacobian(thetas)
+    % JACOBIAN 计算当前姿态的雅可比矩阵
+    % INPUT:
+    % thetas   各关节当前转角(1xN)
+    % OUTPUT:
+    % res      求得的结果(6xN)
+
     % 初始化旋量、初始位姿
     L1 = 491; L2 = 450; L3 = 450; L4 = 84;
     q1 = [0, 0, 0]; q2 = [0, 0, L1];

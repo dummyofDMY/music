@@ -1,12 +1,10 @@
-% AUTHOR : dummy
-%
-% ABSTRACT：这是六轴机器人逆运动学函数，适用于六轴机器人
-% 
-% INPUT：T                机器人末端姿态矩阵，4x4矩阵
-%        
-% OUTPUT: theta           关节转角矩阵，1X6，单位rad      
-%
 function theta = Ikine6s(T)
+    % IKINE6S 这是六轴机器人逆运动学函数，适用于六轴机器人
+    % INPUT:
+    % T                机器人末端姿态矩阵，4x4矩阵    
+    % OUTPUT:
+    % theta           关节转角矩阵，8x6，单位rad，已经规范化了
+
     L1 = 491; L2 = 450; L3 = 450; L4 = 84;
     q1 = [0, 0, 0]; q2 = [0, 0, L1];
     q3 = [0, 0, L1+L2]; q4 = [0, 0, L1+L2];
@@ -33,7 +31,7 @@ function theta = Ikine6s(T)
     % 初始化解
     theta_solve = zeros(8, 6);
     theta_solve(:, :) = NaN;
-    g = T / g0;
+    g = squeeze(T) / g0;
     % 求解theta3
     gq5_q2 = g * q5_ - q2_;
     gq5_q2 = gq5_q2(1:3, 1)';

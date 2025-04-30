@@ -1,4 +1,14 @@
 function theta = subproblem3(Xi, r, p, q, sigma)
+    % SUBPROBLEM3 求解子问题三
+    % INPUT:
+    % Xi       转轴的旋量
+    % r        转轴上一点
+    % p        起始位置(1x3)
+    % q        距离参考点位置(1x3)
+    % sigma    最终位置与参考点位置之间的距离
+    % OUTPUT:
+    % res      求得的结果，已经规范化了
+
     % 定义输入都是行向量
     u = (p - r)';
     v = (q - r)';
