@@ -18,7 +18,7 @@ function theta = subproblem3(Xi, r, p, q, sigma)
     v_ = v - omega * omega' * v;  % 计算投影
 
     c = (u_'*u_ + v_'*v_ - sigma^2) / (2 * norm(u_) * norm(v_));
-    if norm(u_) < 1e-6 || norm(v_) < 1e-6
+    if norm(u_) < 1e-4 || norm(v_) < 1e-4
         disp('WARNING: subproblem3 singular!!!')
         if c < -1 || c > 1
             theta = zeros(2, 1);
@@ -28,7 +28,7 @@ function theta = subproblem3(Xi, r, p, q, sigma)
         end
     else
         theta0 = atan2((omega' * cross(u_, v_)), (u_'*v_));
-        if -1 - c > 1e-6 || c - 1 > 1e-6
+        if -1 - c > 1e-4 || c - 1 > 1e-4
     %         disp('no solution for subproblem3');
             theta = zeros(2, 1);
             theta(:, 1) = NaN;

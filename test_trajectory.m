@@ -18,6 +18,9 @@ for i = 1:5
 end
 v0 = 1000;
 h = 10;
+R = squeeze(gst(4, 1:3, 1:3));
+q = rotation_matrix_to_quaternion(R);
+disp(q);
 saft_gst = squeeze(gst(4, :, :));
 saft_gst(2, 4) = saft_gst(2, 4) - 50;
 saft_gst(3, 4) = saft_gst(3, 4) + 50;

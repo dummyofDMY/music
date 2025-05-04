@@ -19,11 +19,13 @@ function theta = subproblem1(Xi, r, p, q)
     u_ = u - du;
     v_ = v - dv;  % 计算投影
     
-    if norm(u) - norm(v) > 1e-6 || omega' * u - omega' * v > 1e-6
+    tem1 = norm(u) - norm(v);
+    tem2 = omega' * u - omega' * v;
+    if norm(u) - norm(v) > 1e-4 || omega' * u - omega' * v > 1e-4
 %         disp('no solution for subproblem1')
         theta = NaN;
     else
-        if norm(u_) < 1e-6 || norm(v_) < 1e-6
+        if norm(u_) < 1e-4 || norm(v_) < 1e-4
             disp('WARNING: subproblem1 singular!!!')
             theta = 0;
         else
