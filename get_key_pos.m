@@ -1,4 +1,4 @@
-function [gsts] = get_key_pos(l)
+function [res] = get_key_pos(l)
     % GET_KEY_POS 优化算法得出最优关键点的位姿
     % INPUT:
     % l             木琴两个音条中轴线的距离(标量)
@@ -6,9 +6,9 @@ function [gsts] = get_key_pos(l)
     % gsts          关键点位姿(Nx4x4)
 
     % 初始猜测值 (需为单位四元数)
-    typical_q = [0	0	0.923879532511287	0.382683432365090];
+    typical_q = [0.382683432365090	0	0.923879532511287	0];
     typical_p = [5.122186101582196e+02,3.133945035755696,4.610435346606103e+02];
-    x0 = typical_q; % 示例: 表示绕y轴旋转90度
+    x0 = typical_p; % 示例: 表示绕y轴旋转90度
     gsts = zeros(7, 4, 4);
     R = quaternion_to_rotation_matrix(typical_q);
     for i = 1:7
@@ -25,98 +25,162 @@ function [gsts] = get_key_pos(l)
     options = optimoptions('fmincon', 'Display', 'iter', ...
          'MaxIterations', 400, 'MaxFunctionEvaluations', 1500);
 
+    fun = @(x) obj_fun_xyz(x, l);
+    % 调用fmincon求解
+    [x, fval] = fmincon(fun, x0, [], [], [], [], [], [], nonlcon, options);
     res = zeros(7, 4, 4);
     for i = 1:7
-        thetas = [init_thetas(1:(i - 1), :); init_thetas((i + 1):7, :)];
-        xyz = squeeze(gsts(i, 1:3, 4));
-        fun = @(x) obj_fun(x, thetas, xyz);
-        % 调用fmincon求解
-        [x, fval] = fmincon(fun, x0, [], [], [], [], [], [], nonlcon, options);
-    
-        % % 输出结果
-        % disp(['最优解(单位四元数): ', num2str(x)]);
-        % disp(['最小化的目标函数值: ', num2str(fval)]);
-        
-        R = quaternion_to_rotation_matrix(x);
-        gst = [R, xyz';
-               zeros(1, 3), 1];
-        my_theta = Ikine6s(gst);
-        scores = zeros(1, 6);
-    
-        angle_limit = [-170, -120, -170, -170, -120, -360;
-                       170, 120, 170, 170, 120, 360];
-        angle_limit = deg2rad(angle_limit);
-        for j = 1:6
-            nqq = 5 * my_theta(j, :) * my_theta(j, :)';
-            db_q0qj = 2 * my_theta(j, :) * sum(thetas, 1)';
-            scores(1, j) = nqq - db_q0qj;
-            % 罚函数，防止超出角度限制范围
-            punishment1 = squeeze(my_theta(j, :)) - squeeze(angle_limit(2, :));
-            punishment1 = exp(punishment1);
-            punishment2 = squeeze(angle_limit(2, :)) - squeeze(my_theta(j, :));
-            punishment2 = exp(punishment2);
-            scores(1, j) = scores(1, j) + sum(punishment1 + punishment2);
-            % 防止接近奇异
-            J = Jacobian(squeeze(my_theta(j, :)));
-            punishment3 = exp(det(J));
-            scores(1, j) = scores(1, j) + punishment3;
-        end
-        [~, idx] = min(scores);
-        init_thetas(i, :) = my_theta(i, :);
-        res(i, :, :) = gst;
+        res(i, 1:3, 1:3) = R;
+        res(i, 1:3, 4) = x + [0, (i - 4) * l, 0];
+        res(i, 4, 4) = 1;
     end
+    % for i = 1:7
+    %     thetas = [init_thetas(1:(i - 1), :); init_thetas((i + 1):7, :)];
+    %     xyz = squeeze(gsts(i, 1:3, 4));
+    %     fun = @(x) obj_fun(x, thetas, xyz);
+    %     % 调用fmincon求解
+    %     [x, fval] = fmincon(fun, x0, [], [], [], [], [], [], nonlcon, options);
+    % 
+    % end
+    % for i = 1:7
+    %     thetas = [init_thetas(1:(i - 1), :); init_thetas((i + 1):7, :)];
+    %     xyz = squeeze(gsts(i, 1:3, 4));
+    %     fun = @(x) obj_fun(x, thetas, xyz);
+    %     % 调用fmincon求解
+    %     [x, fval] = fmincon(fun, x0, [], [], [], [], [], [], nonlcon, options);
+    % 
+    %     % % 输出结果
+    %     % disp(['最优解(单位四元数): ', num2str(x)]);
+    %     % disp(['最小化的目标函数值: ', num2str(fval)]);
+    % 
+    %     R = quaternion_to_rotation_matrix(x);
+    %     gst = [R, xyz';
+    %            zeros(1, 3), 1];
+    %     my_theta = Ikine6s(gst);
+    %     scores = zeros(1, 6);
+    % 
+    %     angle_limit = [-170, -120, -170, -170, -120, -360;
+    %                    170, 120, 170, 170, 120, 360];
+    %     angle_limit = deg2rad(angle_limit);
+    %     for j = 1:6
+    %         nqq = 5 * my_theta(j, :) * my_theta(j, :)';
+    %         db_q0qj = 2 * my_theta(j, :) * sum(thetas, 1)';
+    %         scores(1, j) = nqq - db_q0qj;
+    %         % 罚函数，防止超出角度限制范围
+    %         punishment1 = squeeze(my_theta(j, :)) - squeeze(angle_limit(2, :));
+    %         punishment1 = exp(punishment1);
+    %         punishment2 = squeeze(angle_limit(2, :)) - squeeze(my_theta(j, :));
+    %         punishment2 = exp(punishment2);
+    %         scores(1, j) = scores(1, j) + sum(punishment1 + punishment2);
+    %         % 防止接近奇异
+    %         J = Jacobian(squeeze(my_theta(j, :)));
+    %         punishment3 = exp(det(J));
+    %         scores(1, j) = scores(1, j) + punishment3;
+    %     end
+    %     [~, idx] = min(scores);
+    %     init_thetas(i, :) = my_theta(i, :);
+    %     res(i, :, :) = gst;
+    % end
 
     save('best_pos', "res");
 end
 
-function f = obj_fun(x, thetas, xyz)
-    % OBJ_FUN 评价函数，衡量一组最优关键点位姿的优秀程度
+function f = obj_fun_xyz(x, l)
+    % OBJ_FUN_XYZ 评价函数，衡量一组最优关键点位姿的优秀程度
     % INPUT:
     % x         待优化参数(1x(3+4N))，内容为[w, x, y, z]，是待优化旋转的四元数
     % thetas    其余的不优化的坐标的关节空间坐标((N-1)x6)
     % xyz       该关键点的xyz坐标(1x3)
     % OUTPUT:
     % f         输出评价指标（越小越好）
-    R = quaternion_to_rotation_matrix(x);
-    gst = [R, xyz';
-           zeros(1, 3), 1];
-    my_theta = Ikine6s(squeeze(gst));
-    if any(isnan(my_theta))
-        disp('nan!!!');
-        disp(gst);
-        disp(my_theta);
+    typical_q = [0.382683432365090	0	0.923879532511287	0];
+    R = quaternion_to_rotation_matrix(typical_q);
+    gsts = zeros(7, 4, 4);
+    for i = 1:7
+        gsts(i, 1:3, 1:3) = R;
+        gsts(i, 1:3, 4) = x + [0, (i - 4) * l, 0];
+        gsts(i, 4, 4) = 1;
     end
-    scores = zeros(1, 6);
+    key_theta = get_nearest_theta(gsts);
+    scores = 0;
 
     angle_limit = [-170, -120, -170, -170, -120, -360;
                    170, 120, 170, 170, 120, 360];
     angle_limit = deg2rad(angle_limit);
-    for i = 1:6
-        nqq = 5 * my_theta(i, :) * my_theta(i, :)';
-        db_q0qi = 2 * my_theta(i, :) * sum(thetas, 1)';
-        scores(1, i) = nqq - db_q0qi;
-        % 罚函数，防止超出角度限制范围
-        punishment1 = squeeze(my_theta(i, :)) - squeeze(angle_limit(2, :));
-        punishment1 = exp(punishment1);
-        punishment2 = squeeze(angle_limit(2, :)) - squeeze(my_theta(i, :));
-        punishment2 = exp(punishment2);
-        scores(1, i) = scores(1, i) + sum(punishment1 + punishment2);
-        % 防止接近奇异
-        J = Jacobian(squeeze(my_theta(i, :)));
-        sigma = svd(J);
-        punishment3 = exp(abs(sigma(end)));
-        scores(1, i) = scores(1, i) + punishment3;
+    for i = 1:7
+        for j = (i+1):7
+            scores = scores + norm(key_theta(i, :) - key_theta(j, :));
+        end
+        % % 罚函数，防止超出角度限制范围
+        % punishment1 = squeeze(key_theta(i, :)) - squeeze(angle_limit(2, :));
+        % punishment1 = exp(punishment1);
+        % punishment2 = squeeze(angle_limit(2, :)) - squeeze(key_theta(i, :));
+        % punishment2 = exp(punishment2);
+        % scores = scores + sum(punishment1 + punishment2);
+        % % 防止接近奇异
+        % J = Jacobian(squeeze(key_theta(i, :)));
+        % sigma = svd(J);
+        % punishment3 = exp(abs(sigma(end)));
+        % scores = scores + punishment3;
     end
-    f = min(scores);
+    f = scores;
     is_valid = isfinite(f) & isreal(f);
     if ~is_valid
         disp('not valid!');
         disp(x);
-        disp(thetas);
-        disp(xyz);
         disp(f);
     end
 end
+
+% function f = obj_fun(x, thetas, xyz)
+%     % OBJ_FUN 评价函数，衡量一组最优关键点位姿的优秀程度
+%     % INPUT:
+%     % x         待优化参数(1x(3+4N))，内容为[w, x, y, z]，是待优化旋转的四元数
+%     % thetas    其余的不优化的坐标的关节空间坐标((N-1)x6)
+%     % xyz       该关键点的xyz坐标(1x3)
+%     % OUTPUT:
+%     % f         输出评价指标（越小越好）
+%     typical_q = [0.382683432365090	0	0.923879532511287	0];
+%     R = quaternion_to_rotation_matrix(typical_q);
+%     gst = [R, x';
+%            zeros(1, 3), 1];
+%     my_theta = Ikine6s(squeeze(gst));
+%     if any(isnan(my_theta))
+%         disp('nan!!!');
+%         disp(gst);
+%         disp(my_theta);
+%     end
+%     scores = zeros(1, 6);
+% 
+%     angle_limit = [-170, -120, -170, -170, -120, -360;
+%                    170, 120, 170, 170, 120, 360];
+%     angle_limit = deg2rad(angle_limit);
+%     for i = 1:6
+%         nqq = 5 * my_theta(i, :) * my_theta(i, :)';
+%         db_q0qi = 2 * my_theta(i, :) * sum(thetas, 1)';
+%         scores(1, i) = nqq - db_q0qi;
+%         % 罚函数，防止超出角度限制范围
+%         punishment1 = squeeze(my_theta(i, :)) - squeeze(angle_limit(2, :));
+%         punishment1 = exp(punishment1);
+%         punishment2 = squeeze(angle_limit(2, :)) - squeeze(my_theta(i, :));
+%         punishment2 = exp(punishment2);
+%         scores(1, i) = scores(1, i) + sum(punishment1 + punishment2);
+%         % 防止接近奇异
+%         J = Jacobian(squeeze(my_theta(i, :)));
+%         sigma = svd(J);
+%         punishment3 = exp(abs(sigma(end)));
+%         scores(1, i) = scores(1, i) + punishment3;
+%     end
+%     f = min(scores);
+%     is_valid = isfinite(f) & isreal(f);
+%     if ~is_valid
+%         disp('not valid!');
+%         disp(x);
+%         disp(thetas);
+%         disp(xyz);
+%         disp(f);
+%     end
+% end
 
 function [c, ceq] = constraint(x)
     % CONSTRAINT 对待优化变量的约束
@@ -128,8 +192,12 @@ function [c, ceq] = constraint(x)
     % c         不等式约束(c <= 0)
     % ceq       等式约束(ceq = 0)
 
-    c = 1 - 2*x(2)^2 - 2*x(3)^2;
-    ceq = norm(x) - 1;
+    % c = 1 - 2*x(2)^2 - 2*x(3)^2;
+    % ceq = norm(x) - 1;
+    r = norm(x);
+
+    c = [500 - r, r - 800, -200 - x(1, 3)];
+    ceq = [];
 end
 
 function best_thetas = get_nearest_theta(gsts)

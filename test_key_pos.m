@@ -1,17 +1,43 @@
+a = 1/2^0.5;
+R = [-a, 0, a;
+     0, 1, 0;
+     -a, 0, -a];
+q = rotation_matrix_to_quaternion(R);
+
 gsts = get_key_pos(20);
 % 计算8个位姿中应该选哪一个
 key_thetas = get_nearest_theta(gsts);  % (Nx6)
-disp(key_thetas);
+disp(squeeze(gsts(4, :, :)));
+disp(gsts)
+
+gsts = permute(gsts, [2 3 1]);  % 变成 4×4×7
+
 figure();
+hold on;
+colors = lines(7);
+scale = 20;
+
 for i = 1:7
-    pt = [gsts(i, 1, 4), gsts(i, 2, 4), gsts(i, 3, 4)];
-    scatter3(pt(1, 1), pt(1, 2), pt(1, 3));
-    hold on;
-    vec = squeeze(gsts(i, 1:3, 1:3)) * [0; 0; 1];
-    quiver3(pt(1, 1), pt(1, 2), pt(1, 3), vec(1, 1), vec(2, 1), vec(3, 1));
-    hold on;
+    T = gsts(:, :, i);  % 每个 4x4 齐次矩阵
+    pt = T(1:3, 4);     % 取出平移部分
+    R = T(1:3, 1:3);    % 取出旋转部分
+    
+    scatter3(pt(1), pt(2), pt(3), 50, 'filled', 'MarkerFaceColor', colors(i, :));
+    
+    % 绘制Z轴方向
+    vec = R * [0; 0; 1];
+    quiver3(pt(1), pt(2), pt(3), vec(1)*scale, vec(2)*scale, vec(3)*scale, ...
+        'Color', colors(i, :), 'LineWidth', 1.5, 'MaxHeadSize', 0.5);
 end
+
+xlabel('X'); ylabel('Y'); zlabel('Z');
+title('End-effector Frames');
+grid on;
+% axis equal;
+view(3);
+xlim padded; ylim padded; zlim padded;
 hold off;
+
 
 function best_thetas = get_nearest_theta(gsts)
     % GET_NEAREST_THETA 在每个关键位姿中选取一组使得位姿两两间关节空间距离之和最小
