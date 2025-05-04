@@ -8,7 +8,7 @@ gsts = get_key_pos(20);
 % 计算8个位姿中应该选哪一个
 key_thetas = get_nearest_theta(gsts);  % (Nx6)
 disp(squeeze(gsts(4, :, :)));
-disp(gsts)
+disp(rad2deg(key_thetas))
 
 gsts = permute(gsts, [2 3 1]);  % 变成 4×4×7
 
@@ -26,6 +26,7 @@ for i = 1:7
     
     % 绘制Z轴方向
     vec = R * [0; 0; 1];
+    disp(vec);
     quiver3(pt(1), pt(2), pt(3), vec(1)*scale, vec(2)*scale, vec(3)*scale, ...
         'Color', colors(i, :), 'LineWidth', 1.5, 'MaxHeadSize', 0.5);
 end
