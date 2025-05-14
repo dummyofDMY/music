@@ -4,20 +4,22 @@ R = [-a, 0, a;
      -a, 0, -a];
 q = rotation_matrix_to_quaternion(R);
 
-gsts = get_key_pos(20);
+% 优化算法算出关键点位姿应该是哪一个
+gsts = get_key_pos(25.57);
 % 计算8个位姿中应该选哪一个
 key_thetas = get_nearest_theta(gsts);  % (Nx6)
-disp(squeeze(gsts(4, :, :)));
+disp(squeeze(gsts(8, :, :)));
 disp(rad2deg(key_thetas))
+save("key_thetas.mat", "key_thetas")
 
-gsts = permute(gsts, [2 3 1]);  % 变成 4×4×7
+gsts = permute(gsts, [2 3 1]);  % 变成 4×4×15
 
 figure();
 hold on;
-colors = lines(7);
+colors = lines(15);
 scale = 20;
 
-for i = 1:7
+for i = 1:15
     T = gsts(:, :, i);  % 每个 4x4 齐次矩阵
     pt = T(1:3, 4);     % 取出平移部分
     R = T(1:3, 1:3);    % 取出旋转部分
@@ -28,7 +30,7 @@ for i = 1:7
     vec = R * [0; 0; 1];
     disp(vec);
     quiver3(pt(1), pt(2), pt(3), vec(1)*scale, vec(2)*scale, vec(3)*scale, ...
-        'Color', colors(i, :), 'LineWidth', 1.5, 'MaxHeadSize', 0.5);
+        'Color', colors(i, :), 'LineWidth', 1.5, 'MaxHeadSize', 0.02);
 end
 
 xlabel('X'); ylabel('Y'); zlabel('Z');

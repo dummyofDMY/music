@@ -6,16 +6,25 @@ function [res] = get_key_pos(l)
     % gsts          关键点位姿(Nx4x4)
 
     % 初始猜测值 (需为单位四元数)
-    typical_q = [0.382683432365090	0	0.923879532511287	0];
-    typical_p = [5.122186101582196e+02,3.133945035755696,4.610435346606103e+02];
+    % typical_q = [0.382683432365090	0	0.923879532511287	0];
+    J_theta = [-1.645,32.503,109.415,-0.036,38.276,-3.612];
+    J_theta = deg2rad(J_theta);
+    gstk = Fkine(J_theta);
+    typical_q = rotation_matrix_to_quaternion(squeeze(gstk(1:3, 1:3)));
+    typical_p = [518.86, -14.93, 435.31];
     x0 = typical_p; % 示例: 表示绕y轴旋转90度
-    gsts = zeros(7, 4, 4);
+    gsts = zeros(15, 4, 4);
     R = quaternion_to_rotation_matrix(typical_q);
-    for i = 1:7
+    for i = 1:15
         gsts(i, 1:3, 1:3) = R;
-        gsts(i, 1:3, 4) = typical_p + [0, (i - 4) * l, 0];
+        gsts(i, 1:3, 4) = typical_p + [0, (i - 8) * l, 0];
         gsts(i, 4, 4) = 1;
     end
+    % tem = zeros(15, 3);
+    % for i = 1:15
+    %     tem(i, :) = gsts(i, 1:3, 4);
+    % end
+    % disp(tem);
     
     
     % 设置非线性约束
@@ -26,12 +35,12 @@ function [res] = get_key_pos(l)
          'MaxIterations', 400, 'MaxFunctionEvaluations', 1500);
 
     fun = @(x) obj_fun_xyz(x, l);
-    % 调用fmincon求解
-    [x, fval] = fmincon(fun, x0, [], [], [], [], [], [], nonlcon, options);
-    res = zeros(7, 4, 4);
-    for i = 1:7
+    % % 调用fmincon求解
+    % [x, fval] = fmincon(fun, x0, [], [], [], [], [], [], nonlcon, options);
+    res = zeros(15, 4, 4);
+    for i = 1:15
         res(i, 1:3, 1:3) = R;
-        res(i, 1:3, 4) = x + [0, (i - 4) * l, 0];
+        res(i, 1:3, 4) = x0 + [0, (i - 8) * l, 0];
         res(i, 4, 4) = 1;
     end
     % 角度优化
@@ -40,8 +49,8 @@ function [res] = get_key_pos(l)
     init_thetas = get_nearest_theta(res);
     x0 = typical_q;
     nonlcon = @constraint;
-    for i = 1:7
-        thetas = [init_thetas(1:(i - 1), :); init_thetas((i + 1):7, :)];
+    for i = 1:15
+        thetas = [init_thetas(1:(i - 1), :); init_thetas((i + 1):15, :)];
         xyz = squeeze(res(i, 1:3, 4));
         fun = @(x) obj_fun(x, thetas, xyz);
         
@@ -61,7 +70,7 @@ function [res] = get_key_pos(l)
         angle_limit = [-170, -120, -170, -170, -120, -360;
                        170, 120, 170, 170, 120, 360];
         angle_limit = deg2rad(angle_limit);
-        for j = 1:6
+        for j = 1:8
             nqq = 5 * my_theta(j, :) * my_theta(j, :)';
             db_q0qj = 2 * my_theta(j, :) * sum(thetas, 1)';
             scores(1, j) = nqq - db_q0qj;
@@ -79,7 +88,7 @@ function [res] = get_key_pos(l)
             % scores(1, j) = scores(1, j) + punishment3;
         end
         [~, idx] = min(scores);
-        init_thetas(i, :) = my_theta(i, :);
+        init_thetas(i, :) = my_theta(idx, :);
         res(i, :, :) = gst;
     end
 
@@ -96,8 +105,8 @@ function f = obj_fun_xyz(x, l)
     % f         输出评价指标（越小越好）
     typical_q = [0.382683432365090	0	0.923879532511287	0];
     R = quaternion_to_rotation_matrix(typical_q);
-    gsts = zeros(7, 4, 4);
-    for i = 1:7
+    gsts = zeros(15, 4, 4);
+    for i = 1:15
         gsts(i, 1:3, 1:3) = R;
         gsts(i, 1:3, 4) = x + [0, (i - 4) * l, 0];
         gsts(i, 4, 4) = 1;
@@ -108,8 +117,8 @@ function f = obj_fun_xyz(x, l)
     angle_limit = [-170, -120, -170, -170, -120, -360;
                    170, 120, 170, 170, 120, 360];
     angle_limit = deg2rad(angle_limit);
-    for i = 1:7
-        for j = (i+1):7
+    for i = 1:15
+        for j = (i+1):15
             scores = scores + norm(key_theta(i, :) - key_theta(j, :));
         end
         % % 罚函数，防止超出角度限制范围
