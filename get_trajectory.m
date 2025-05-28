@@ -4,12 +4,14 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
     % music     乐谱(2xM，M为关键点数)，记录哪个时间点应该敲击哪个位置，第一行是时间，第二行是敲击点下标
     %           要求空出第1s（此时认为在等待位置）
     % gst       进入敲击轨迹的位姿(Nx4x4，N为敲击点数)
-    % v        进入敲击轨迹时的速度(标量)
-    % h         敲击轨迹长度(标量)
+    % v        进入敲击轨迹时的速度(°/s)
+    % h         敲击轨迹角度(角度制)
     % OUTPUT:
     % t         每个坐标对应的时间点(1xlen，len为采样点数)
     % xyz       最终轨迹在笛卡尔空间的坐标(3xlen)
     % theta     最终轨迹在关节空间的坐标(6xlen)
+    h = h / 180 * pi;
+    v = v / 180 * pi;
     key_t = music(1, :);
     key_p_id = music(2, :);
     dt = 0.001;
@@ -63,7 +65,7 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
         else
             start_t = key_t(i - 1);
             x0 = key_thetas(key_p_id(i - 1), :);
-            v0 = -key_dtheta(key_p_id(i - 1), :);
+            v0 = [0, 0, 0, 0, -v, 0];
         end
         end_t = key_t(i);
         mid_t = end_t - t_im;
@@ -72,7 +74,7 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
         mid_id = ceil(mid_t / dt) + 1;
         % 计算转移轨迹
         xf = key_thetas(key_p_id(i), :);
-        vf = key_dtheta(key_p_id(i), :);
+        vf = [0, 0, 0, 0, v, 0];
         [a0, a1, a2, a3] = get_transfer_trajectory(x0, xf, v0, vf, mid_t - start_t);
         
         A = [a0', a1', a2', a3'];
@@ -86,57 +88,67 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
             disp('WTF?')
         end
         theta(:, start_id:(mid_id - 1)) = A * T;
+
+        % 计算第5轴限幅的敲击轨迹
+        five_limit = 10 / 180 * pi;
+        if v * (mid_t - start_t) / 4 > five_limit
+            k_th = key_thetas(key_p_id(i));
+            at = v^2 / 2 / five_limit;  % 加速度
+            td = v / at;
+            t1 = start_t + v / at;
+            t2 = mid_t - v / at;
+            id1 = ceil(t1 / dt) + 1;
+            id2 = ceil(t2 / dt) + 1;
+            theta5 = k_th - five_limit;
+            a2 = at / 2;
+            a1 = -v;
+            a0 = k_th;
+            t_line = start_id:(id1 - 1);
+            t_line = (t_line - 1) * dt;
+            t_line = t_line - start_t;
+            T = [ones(1, id1 - start_id); t_line; t_line.^2];
+            A = [a0, a1, a2];
+            theta(5, start_id:(id1 - 1)) = A * T;
+
+            theta(5, id1:(id2 - 1)) = theta5;
+
+            a1 = 0;
+            a0 = theta5;
+            t_line = id2:(end_id - 1);
+            t_line = (t_line - 1) * dt;
+            t_line = t_line - t2;
+            T = [ones(1, end_id - id2); t_line; t_line.^2];
+            A = [a0, a1, a2];
+            theta(5, id2:(end_id - 1)) = A * T;
+        end
+
+        % 计算笛卡尔坐标
         for j = start_id:(mid_id - 1)
             now_gst = Fkine(theta(:, j)');
             xyz(:, j) = now_gst(1:3, 4);
         end
         % visualize(xyz(1, start_id:(mid_id - 1)), xyz(2, start_id:(mid_id - 1)), xyz(3, start_id:(mid_id - 1)))
+
         
-        % 计算敲击轨迹
-        x0 = squeeze(gst(key_p_id(i), 1:3, 4));
-        v0 = [0, 0, -1] * v;
-        xt = x0;
-        xt(3) = xt(3) - h;
-        [a0, a1, a2, ~] = get_impact_trajectory(x0, xt, v0);
+
+        % 计算只用5号轴的敲击轨迹
+        theta0 = squeeze(key_thetas(key_p_id(i), :));
+        omega0 = [0, 0, 0, 0, v, 0];
+        theta_t = theta0;
+        theta_t(1, 5) = theta_t(1, 5) + h;
+        [a0, a1, a2, ~] = get_impact_trajectory(theta0, theta_t, omega0);
         A = [a0', a1', a2'];
         t_line = mid_id:(end_id - 1);
         t_line = (t_line - 1) * dt;
         t_line = t_line - mid_t;
         T = [ones(1, end_id - mid_id); t_line; t_line.^2];
-        xyz(:, mid_id:(end_id - 1)) = A * T;
-
-        % 观察撞击曲线算错没
-        z_list = squeeze(xyz(3, mid_id:(end_id - 1)));
-        z_list_len = length(z_list);
-        plot(1:z_list_len, z_list);
-        grid on;
-
-        now_gst = squeeze(gst(key_p_id(i), :, :));
-        for j = mid_id:(end_id - 1)
-            now_gst(1:3, 4) = xyz(:, j);
-            solve = Ikine6s(now_gst);
-            best_solve_id = 0;
-            best_solve_score = inf;
-            for k = 1:8
-                ths = solve(k, :);
-                if any(ths > angle_limit(2, :)) || ...
-                   any(ths < angle_limit(1, :))
-                    continue
-                end
-                last_th = theta(:, j - 1)';
-                d = norm(ths - last_th);
-                if d < best_solve_score
-                    best_solve_id = k;
-                    best_solve_score = d;
-                end
-            end
-            if best_solve_score > 0.1
-                disp('WARNING: thetas leap in trajectory solving! Gap is:');
-                disp(best_solve_score);
-                disp(last_th);
-                disp(solve(best_solve_id, :))
-            end
-            theta(:, j) = solve(best_solve_id, :);
+        theta(:, mid_id:(end_id - 1)) = A * T;
+        % 顺解计算xyz
+        for now_id = mid_id:(end_id - 1)
+            now_theta = theta(:, now_id);
+            now_theta = squeeze(now_theta)';
+            now_gst = Fkine(now_theta);
+            xyz(:, now_id) = now_gst(1:3, 4);
         end
     end
     

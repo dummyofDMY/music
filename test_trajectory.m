@@ -43,7 +43,7 @@ music = [t; scale];
 % writematrix(thetas, 'key_theta_test.txt', 'Delimiter', 'space');
 
 v0 = 500;
-h = 10;
+h = 20;
 % key_pt_Js = load("key_theta_test.txt");
 key_pt_Js = load('key_thetas.mat');
 key_pt_Js = key_pt_Js.key_thetas;
