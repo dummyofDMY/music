@@ -50,8 +50,8 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
     end
 
     % 关节转角限制
-    angle_limit = [-170, -120, -170, -170, -120, -360;
-                   170, 120, 170, 170, 120, 360];
+    angle_limit = [-170, -120, -140, -170, -120, -360;
+                   170, 120, 140, 170, 120, 360];
     angle_limit = deg2rad(angle_limit);
 
     % 逐段计算轨迹
@@ -133,6 +133,8 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
             if best_solve_score > 0.1
                 disp('WARNING: thetas leap in trajectory solving! Gap is:');
                 disp(best_solve_score);
+                disp(last_th);
+                disp(solve(best_solve_id, :))
             end
             theta(:, j) = solve(best_solve_id, :);
         end
@@ -182,8 +184,8 @@ function best_thetas = get_saft_theta(gsts, key_thetas)
     % best_thetas   计算出的两两间距离最小一组theta(Nx6)
 
     % 关节转角限制
-    angle_limit = [-170, -120, -170, -170, -120, -360;
-                   170, 120, 170, 170, 120, 360];
+    angle_limit = [-170, -120, -140, -170, -120, -360;
+                   170, 120, 140, 170, 120, 360];
     angle_limit = deg2rad(angle_limit);
 
     saft_thetas = Ikine6s(gsts);  % (8x6)
@@ -225,8 +227,8 @@ function best_thetas = get_nearest_theta(gsts)
     end
 
     % 关节转角限制
-    angle_limit = [-170, -120, -170, -170, -120, -360;
-                   170, 120, 170, 170, 120, 360];
+    angle_limit = [-170, -120, -140, -170, -120, -360;
+                   170, 120, 140, 170, 120, 360];
     angle_limit = deg2rad(angle_limit);
     
     matches = NaN(8, N);
@@ -291,8 +293,8 @@ end
 %     N = size(gsts);
 %     N = N(1);
 %     key_theta = zeros(N, 8, 6);
-%     angle_limit = [-170, -120, -170, -170, -120, -360;
-%                    170, 120, 170, 170, 120, 360];
+%     angle_limit = [-170, -120, -140, -170, -120, -360;
+%                    170, 120, 140, 170, 120, 360];
 %     angle_limit = deg2rad(angle_limit);
 %     for i = 1:N
 %         key_theta(i, :, :) = Ikine6s(gsts(i, :, :));
