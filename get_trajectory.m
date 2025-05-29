@@ -92,34 +92,56 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
         % 计算第5轴限幅的敲击轨迹
         five_limit = 10 / 180 * pi;
         if v * (mid_t - start_t) / 4 > five_limit
-            k_th = key_thetas(key_p_id(i));
-            at = v^2 / 2 / five_limit;  % 加速度
-            td = v / at;
-            t1 = start_t + v / at;
-            t2 = mid_t - v / at;
-            id1 = ceil(t1 / dt) + 1;
-            id2 = ceil(t2 / dt) + 1;
-            theta5 = k_th - five_limit;
-            a2 = at / 2;
-            a1 = -v;
-            a0 = k_th;
-            t_line = start_id:(id1 - 1);
-            t_line = (t_line - 1) * dt;
-            t_line = t_line - start_t;
-            T = [ones(1, id1 - start_id); t_line; t_line.^2];
-            A = [a0, a1, a2];
-            theta(5, start_id:(id1 - 1)) = A * T;
+            if i == 1
+                k_th = saft_thetas(1, 5);
+                mid_th = k_th - five_limit;
+                k_th2 = key_thetas(key_p_id(i), 5);
+                at1 = v^2 / 2 / five_limit;  % 加速度
+                at2 = v^2 / 2 / (k_th2 - mid_th);
+                t1 = start_t + v / at1;
+                t2 = mid_t - v / at2;
+                id1 = ceil(t1 / dt) + 1;
+                id2 = ceil(t2 / dt) + 1;
+                [a0, a1, a2, a3] = get_transfer_trajectory(k_th, mid_th, 0, 0, v / at1);
+                t_line = start_id:(id1 - 1);
+                t_line = (t_line - 1) * dt;
+                t_line = t_line - start_t;
+                T = [ones(1, id1 - start_id); t_line; t_line.^2; t_line.^3];
+                A = [a0, a1, a2, a3];
+                theta(5, start_id:(id1 - 1)) = A * T;
+            else
+                k_th = key_thetas(key_p_id(i - 1), 5);
+                mid_th = k_th - five_limit;
+                k_th2 = key_thetas(key_p_id(i), 5);
+                at1 = v^2 / 2 / five_limit;  % 加速度
+                at2 = v^2 / 2 / (k_th2 - mid_th);
+                t1 = start_t + v / at1;
+                t2 = mid_t - v / at2;
+                id1 = ceil(t1 / dt) + 1;
+                id2 = ceil(t2 / dt) + 1;
+                a2 = at1 / 2;
+                a1 = -v;
+                a0 = k_th;
+                t_line = start_id:(id1 - 1);
+                t_line = (t_line - 1) * dt;
+                t_line = t_line - start_t;
+                T = [ones(1, id1 - start_id); t_line; t_line.^2];
+                A = [a0, a1, a2];
+                theta(5, start_id:(id1 - 1)) = A * T;
+            end
+            
 
-            theta(5, id1:(id2 - 1)) = theta5;
+            theta(5, id1:(id2 - 1)) = mid_th;
 
+            a2 = at2 / 2;
             a1 = 0;
-            a0 = theta5;
-            t_line = id2:(end_id - 1);
+            a0 = mid_th;
+            t_line = id2:(mid_id - 1);
             t_line = (t_line - 1) * dt;
             t_line = t_line - t2;
-            T = [ones(1, end_id - id2); t_line; t_line.^2];
+            T = [ones(1, mid_id - id2); t_line; t_line.^2];
             A = [a0, a1, a2];
-            theta(5, id2:(end_id - 1)) = A * T;
+            theta(5, id2:(mid_id - 1)) = A * T;
         end
 
         % 计算笛卡尔坐标
@@ -158,7 +180,7 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
     start_id = ceil(start_t / dt) + 1;
     end_id = ceil(end_t / dt) + 1;
     x0 = key_thetas(key_p_id(end), :);
-    v0 = -key_dtheta(key_p_id(end), :);
+    v0 = [0, 0, 0, 0, -v, 0];
     xf = saft_thetas;
     vf = zeros(1, 6);
     [a0, a1, a2, a3] = get_transfer_trajectory(x0, xf, v0, vf, end_t - start_t);
@@ -168,6 +190,45 @@ function [t, xyz, theta] = get_trajectory(music, gst, v, h, saft_gst)
     t_line = t_line - start_t;
     T = [ones(1, end_id - start_id); t_line; t_line.^2; t_line.^3];
     theta(:, start_id:end_id - 1) = A * T;
+
+    % 计算第5轴限幅的敲击轨迹
+    five_limit = 10 / 180 * pi;
+    if v * (end_t - start_t) / 4 > five_limit
+        k_th = key_thetas(key_p_id(end), 5);
+        mid_th = k_th - five_limit;
+        k_th2 = saft_thetas(1, 5);
+        at1 = v^2 / 2 / five_limit;  % 加速度
+        at2 = v^2 / 2 / (k_th2 - mid_th);
+        t1 = start_t + v / at1;
+        t2 = end_t - v / at2;
+        id1 = ceil(t1 / dt) + 1;
+        id2 = ceil(t2 / dt) + 1;
+        mid_th = k_th - five_limit;
+        a2 = at1 / 2;
+        if i == 1
+            a1 = 0;
+        else
+            a1 = -v;
+        end
+        a0 = k_th;
+        t_line = start_id:(id1 - 1);
+        t_line = (t_line - 1) * dt;
+        t_line = t_line - start_t;
+        T = [ones(1, id1 - start_id); t_line; t_line.^2];
+        A = [a0, a1, a2];
+        theta(5, start_id:(id1 - 1)) = A * T;
+
+        theta(5, id1:(id2 - 1)) = mid_th;
+
+        [a0, a1, a2, a3] = get_transfer_trajectory(mid_th, k_th2, 0, 0, v / at2);
+        t_line = id2:(end_id - 1);
+        t_line = (t_line - 1) * dt;
+        t_line = t_line - t2;
+        T = [ones(1, end_id - id2); t_line; t_line.^2; t_line.^3];
+        A = [a0, a1, a2, a3];
+        theta(5, id2:(end_id - 1)) = A * T;
+    end
+
     for j = start_id:(end_id - 1)
         now_gst = Fkine(theta(:, j)');
         xyz(:, j) = now_gst(1:3, 4);

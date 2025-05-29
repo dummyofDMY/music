@@ -2,8 +2,10 @@
 %          1, 7];
 
 % % Do Re Mi检验
-% t = [1.500, 2.000, 2.500, 3.000, 3.500, 4.000, 4.500, 5.000, 5.500, 6.000, 6.500, 7.000, 7.500, 8.000, 8.500
-% ];
+% % t = [1.500, 2.000, 2.500, 3.000, 3.500, 4.000, 4.500, 5.000, 5.500, 6.000, 6.500, 7.000, 7.500, 8.000, 8.500
+% % ];
+% t = 1:15;
+% t = t * 0.2 + 1;
 % scale = 1:15;
 % % scale = [scale, 1];
 % music = [t; scale];
@@ -42,18 +44,22 @@ music = [t; scale];
 % thetas = get_nearest_theta(gst);
 % writematrix(thetas, 'key_theta_test.txt', 'Delimiter', 'space');
 
-v0 = 500;
-h = 20;
-% key_pt_Js = load("key_theta_test.txt");
-key_pt_Js = load('key_thetas.mat');
-key_pt_Js = key_pt_Js.key_thetas;
-key_pt_Js = key_pt_Js(end:-1:1, :);
+v0 = 200;
+h = 3;
+
+key_pt_Js = load("key_theta.txt");
+key_pt_Js = deg2rad(key_pt_Js);
+
+% key_pt_Js = load('key_thetas.mat');
+% key_pt_Js = key_pt_Js.key_thetas;
+% key_pt_Js = key_pt_Js(end:-1:1, :);
+
 [pose_num, ~] = size(key_pt_Js);
 gst = zeros(pose_num, 4, 4);
 for i = 1:pose_num
     gst(i, :, :) = Fkine(squeeze(key_pt_Js(i, :)));
 end
-saft_gst = gst(round((1 + pose_num) / 2), :, :);
+saft_gst = gst(scale(1, 1), :, :);
 saft_gst = squeeze(saft_gst);
 
 [t, xyz, theta] = get_trajectory(music, gst, v0, h, saft_gst);
@@ -69,6 +75,16 @@ t = t + 1;
 figure();
 plot(t, theta);
 legend('1', '2', '3', '4', '5', '6');
+figure();
+% plot(t(2:end), diff(theta, 1, 2));
+% legend('1', '2', '3', '4', '5', '6');
+dtheta = diff(theta, 1, 2);
+plot(t(2:end), dtheta(1, :));
+hold on;
+plot(t(2:end), dtheta(5, :));
+legend('1', '5');
+% dtheta = diff(theta, 1, 2);
+% plot(t(2:end), dtheta(1, :));
 writematrix(theta', 'pt_list.txt', 'Delimiter', 'space');
 
 function best_thetas = get_nearest_theta(gsts)
