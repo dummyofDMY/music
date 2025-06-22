@@ -1,12 +1,12 @@
 % music = [1.1, 1.2;
 %          1, 7];
 
-% % Do Re Mi检验
-% t = [1.500, 2.000, 2.500, 3.000, 3.500, 4.000, 4.500, 5.000, 5.500, 6.000, 6.500, 7.000, 7.500, 8.000, 8.500
-% ];
-% scale = 1:15;
-% % scale = [scale, 1];
-% music = [t; scale];
+% Do Re Mi检验
+t = [1.500, 2.000, 2.500, 3.000, 3.500, 4.000, 4.500, 5.000, 5.500, 6.000, 6.500, 7.000, 7.500, 8.000, 8.500
+];
+scale = 1:15;
+% scale = [scale, 1];
+music = [t; scale];
 
 % % 小星星简谱
 % t = [1.300, 1.600, 1.900, 2.200, 2.500, 2.800, 3.100, 3.700, 4.000,...
@@ -19,10 +19,10 @@
 %     8, 7, 7, 6, 6, 5, 4, 4, 8, 8, 9, 9, 8, 7, 7, 6, 6, 5, 5, 4];
 % music = [t; scale];
 
-% 世界如此可爱简谱
-t = load('lovelyworld_t.txt');
-scale = load('lovelyworld_s.txt');
-music = [t; scale];
+% % 世界如此可爱简谱
+% t = load('lovelyworld_t.txt');
+% scale = load('lovelyworld_s.txt');
+% music = [t; scale];
 
 % gst = zeros(15, 4, 4);
 % th0 = [-16.551, 30.381, 107.605, 0.379, 38.273, 151.667];
@@ -57,8 +57,14 @@ saft_gst = gst(round((1 + pose_num) / 2), :, :);
 saft_gst = squeeze(saft_gst);
 
 [t, xyz, theta] = get_trajectory(music, gst, v0, h, saft_gst);
+figure();
+subplot(2, 1, 1);
 plot3(xyz(1, :), xyz(2, :), xyz(3, :))
 grid on;
+title('low-variation trajectory in cartesian space')
+xlabel('X(mm)');
+ylabel('Y(mm)');
+zlabel('Z(mm)');
 
 theta = rad2deg(theta);
 theta = round(theta, 4);
@@ -66,9 +72,13 @@ theta = round(theta, 4);
 t = 1:t_len;
 t = t * 0.001;
 t = t + 1;
-figure();
+% figure();
+subplot(2, 1, 2)
 plot(t, theta);
-legend('1', '2', '3', '4', '5', '6');
+title('low-variation trajectory in joint space');
+xlabel('time(s)');
+ylabel('angle(degree)')
+legend('1st joint', '2nd joint', '3rd joint', '4th joint', '5th joint', '6th joint');
 writematrix(theta', 'pt_list.txt', 'Delimiter', 'space');
 
 function best_thetas = get_nearest_theta(gsts)
