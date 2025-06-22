@@ -17,7 +17,7 @@ gsts = permute(gsts, [2 3 1]);  % 变成 4×4×15
 figure();
 hold on;
 colors = lines(15);
-scale = 20;
+scale = 0.2;
 
 for i = 1:15
     T = gsts(:, :, i);  % 每个 4x4 齐次矩阵
@@ -30,11 +30,11 @@ for i = 1:15
     vec = R * [0; 0; 1];
     disp(vec);
     quiver3(pt(1), pt(2), pt(3), vec(1)*scale, vec(2)*scale, vec(3)*scale, ...
-        'Color', colors(i, :), 'LineWidth', 1.5, 'MaxHeadSize', 0.02);
+        'Color', colors(i, :), 'LineWidth', 1.5, 'MaxHeadSize', 0.2);
 end
 
 xlabel('X'); ylabel('Y'); zlabel('Z');
-title('End-effector Frames');
+title('Connection point pose optimization results');
 grid on;
 % axis equal;
 view(3);

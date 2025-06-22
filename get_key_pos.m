@@ -167,7 +167,7 @@ function f = obj_fun(x, thetas, xyz)
                    170, 120, 170, 170, 120, 360];
     angle_limit = deg2rad(angle_limit);
     for i = 1:6
-        nqq = 5 * my_theta(i, :) * my_theta(i, :)';
+        nqq = 15 * my_theta(i, :) * my_theta(i, :)';
         db_q0qi = 2 * my_theta(i, :) * sum(thetas, 1)';
         scores(1, i) = nqq - db_q0qi;
         % % 罚函数，防止超出角度限制范围
@@ -183,6 +183,12 @@ function f = obj_fun(x, thetas, xyz)
         % sigma = svd(J);
         % punishment3 = exp(abs(sigma(end)));
         % scores(1, i) = scores(1, i) + punishment3;
+        J = Jacobian(squeeze(my_theta(i, :)));
+        [U, S, V] = svd(J);
+        s = diag(S); % 获取奇异值向量
+        condition_number = s(1) / s(end);
+        punishment3 = condition_number;
+        scores(1, i) = scores(1, i) + punishment3*1e-3;
     end
     f = min(scores);
     is_valid = isfinite(f) & isreal(f);
