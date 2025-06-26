@@ -80,6 +80,9 @@ xlabel('time(s)');
 ylabel('angle(degree)')
 legend('1st joint', '2nd joint', '3rd joint', '4th joint', '5th joint', '6th joint');
 writematrix(theta', 'pt_list.txt', 'Delimiter', 'space');
+min_vec = min(theta, [], 2);
+max_vec = max(theta, [], 2);
+disp([min_vec, max_vec, max_vec - min_vec]);
 
 function best_thetas = get_nearest_theta(gsts)
     % GET_NEAREST_THETA 在每个关键位姿中选取一组使得位姿两两间关节空间距离之和最小
